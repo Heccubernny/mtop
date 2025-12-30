@@ -1,0 +1,13 @@
+{
+    "present": "laravel",
+    "exclude": [
+        "storage/**",
+        "vendor/**",
+        "node_modules/**",
+        "tests/**"
+    ],
+    "rules": {
+        "ordered_imports": true,
+        "no_unused_imports": true
+    }
+}
