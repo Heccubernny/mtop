@@ -168,7 +168,7 @@
 
                         <div class="dash-payment-body">
                             <div class="preview-list-wrapper">
-                                <div class="preview-list-item">
+                                {{-- <div class="preview-list-item">
                                     <div class="preview-list-left">
                                         <div class="preview-list-user-wrapper">
                                             <div class="preview-list-user-icon"><i class="las la-network-wired"></i></div>
@@ -180,7 +180,7 @@
                                     <div class="preview-list-right">
                                         <span class="preview-provider">--</span>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <div class="preview-list-item">
                                     <div class="preview-list-left">
@@ -298,7 +298,7 @@
             document.getElementById('networkCode').value = "";
             submitBtn.disabled = true;
             document.querySelector(".preview-network").textContent = "--";
-            const preview = document.querySelector(".preview-provider");
+            const preview = document.querySelector(".preview-network");
             if (preview) preview.textContent = "--";
         }
 
@@ -343,17 +343,25 @@
                 });
 
                 const res = await req.json();
+                const operatorRaw = res.data.name;
 
 
-                if (!req.ok || !res.status || !res.data || !res.data.name) {
+
+                if (!req.ok || !res.status || !res.data || !operatorRaw) {
                     resetOperator();
                     showPopup("Invalid or unsupported network number", "error");
                     return;
                 }
+                let operatorSlug = operatorRaw.toLowerCase().trim();
 
-                const providerName = (res.data.name || "UNKNOWN").toUpperCase();
+                operatorSlug = operatorSlug.replace(" ", "").replace("-", "").replace("nigeria", "").trim();
+
+                const providerName = operatorRaw.toUpperCase();
                 const providerId = res.data.id || "";
                 const exchangeRate = res.data.rate || "";
+
+                let matched = false;
+                const networkSelect = document.getElementById("networkSelect");
 
                 // Assign values
                 document.querySelector("#operator").value = providerName;
@@ -361,8 +369,31 @@
                 document.querySelector("#exchangeRate").value = exchangeRate;
 
                 // Update preview display
-                const preview = document.querySelector(".preview-provider");
+                const preview = document.querySelector(".preview-network");
                 if (preview) preview.textContent = providerName;
+
+                Array.from(networkSelect.options).forEach(option => {
+                    const dbSlug = option.textContent.toLowerCase().trim();
+
+                    if (dbSlug === operatorSlug) {
+                        option.selected = true;
+                        matched = true;
+
+                        // update hidden field
+                        document.getElementById("networkCode").value = option.dataset.code;
+
+                        // update preview (if you have one)
+                        // document.querySelector(".preview-provider").textContent = operatorRaw;
+                        document.querySelector(".preview-network").textContent = operatorRaw;
+
+                        break;
+                    }
+                });
+
+                // no match case
+                if (!matched) {
+                    showPopup(`Network detected: ${operatorRaw}, but cannot auto-match. Select manually.`, "warning");
+                }
 
                 submitBtn.disabled = false;
                 showPopup(`Network detected: ${providerName}`, "success");
@@ -432,6 +463,22 @@
         // Close alerts
         document.querySelectorAll('.close-alert').forEach(btn => {
             btn.addEventListener('click', () => btn.parentElement.classList.add('fade-out'));
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alertBox');
+
+            alerts.forEach(alert => {
+                // Auto close after 5 seconds
+                setTimeout(() => {
+                    alert.remove();
+                }, 5000);
+
+                // Close on button click
+                const closeBtn = alert.querySelector('.close-alert');
+                closeBtn.addEventListener('click', () => {
+                    alert.remove();
+                });
+            });
         });
     </script>
 @endpush

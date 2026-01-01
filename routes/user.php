@@ -154,6 +154,8 @@ Route::prefix('user')->name('user.')->group(function () {
     Route::prefix('airtime')->name('airtime.')->group(function () {
         Route::get('/', [BillPayController::class, 'ckAirtime'])->name('index');
         Route::post('/buy', [BillPayController::class, 'buyAirtime'])->name('buy');
+        Route::get('/success/{id}', [BillPayController::class, 'successAirtime'])->name('success');
+        Route::get('/receipt/{id}', [BillPayController::class, 'downloadReceipt'])->name('receipt');
     });
 
     Route::prefix('cable')->name('cable.')->group(function () {

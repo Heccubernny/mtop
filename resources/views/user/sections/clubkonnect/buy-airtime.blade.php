@@ -150,10 +150,20 @@
                                     </div>
 
                                     {{-- AMOUNT --}}
-                                    <div class="col-xxl-6 col-xl-6 col-lg-6 form-group">
+                                    <div class="col-xxl-12 col-xl-12 col-lg-12 form-group">
                                         <label>{{ __('Amount (₦)') }} <span class="text--base">*</span></label>
                                         <input class="form--control" name="amount" type="number" min="50"
                                             max="200000" placeholder="50 - 200000" required>
+                                        <div class="cashback-option mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input mt-1 px-2 py-2" id="useCashback"
+                                                    name="use_cashback" type="checkbox" value="1">
+                                                <label class="form-check-label" for="useCashback">
+                                                    &nbsp;Pay with Cashback Balance:
+                                                    ₦{{ number_format($userWallet->cashback, 2) }}
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="col-xl-12 col-lg-12 mt-2">
@@ -185,7 +195,7 @@
 
                         <div class="dash-payment-body">
                             <div class="preview-list-wrapper">
-                                <div class="preview-list-item">
+                                {{-- <div class="preview-list-item">
                                     <div class="preview-list-left">
                                         <div class="preview-list-user-wrapper">
                                             <div class="preview-list-user-icon"><i class="las la-network-wired"></i></div>
@@ -197,7 +207,7 @@
                                     <div class="preview-list-right">
                                         <span class="preview-provider">--</span>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <div class="preview-list-item">
                                     <div class="preview-list-left">
@@ -353,7 +363,7 @@
             document.querySelector("#exchangeRate").value = "";
             submitBtn.disabled = true;
 
-            const preview = document.querySelector(".preview-provider");
+            const preview = document.querySelector(".preview-network");
             if (preview) preview.textContent = "--";
         }
 
@@ -385,17 +395,26 @@
                 });
 
                 const res = await req.json();
+                const operatorRaw = res.data.name;
 
 
-                if (!req.ok || !res.status || !res.data || !res.data.name) {
+                if (!req.ok || !res.status || !res.data || !operatorRaw) {
                     resetOperator();
                     showPopup("Invalid or unsupported network number", "error");
                     return;
                 }
+                let operatorSlug = operatorRaw.toLowerCase().trim();
 
-                const providerName = (res.data.name || "UNKNOWN").toUpperCase();
+                operatorSlug = operatorSlug.replace(" ", "").replace("-", "").replace("nigeria", "").trim();
+                const providerName = operatorRaw.toUpperCase();
                 const providerId = res.data.id || "";
                 const exchangeRate = res.data.rate || "";
+
+
+                let matched = false;
+
+                const networkSelect = document.getElementById("networkSelect");
+
 
                 // Assign values
                 document.querySelector("#operator").value = providerName;
@@ -403,8 +422,36 @@
                 document.querySelector("#exchangeRate").value = exchangeRate;
 
                 // Update preview display
-                const preview = document.querySelector(".preview-provider");
+                const preview = document.querySelector(".preview-network");
+
                 if (preview) preview.textContent = providerName;
+
+                // loop through DB networks and match by slug displayed in option
+                for (let option of networkSelect.options) {
+
+                    const dbSlug = option.textContent.toLowerCase().trim();
+
+                    console.log(dbSlug, operatorSlug);
+                    if (dbSlug === operatorSlug) {
+                        option.selected = true;
+                        matched = true;
+
+                        // update hidden field
+                        document.getElementById("networkCode").value = option.dataset.code;
+
+                        // update preview (if you have one)
+                        // document.querySelector(".preview-provider").textContent = operatorRaw;
+                        document.querySelector(".preview-network").textContent = operatorRaw;
+
+
+                        break;
+                    }
+                }
+
+                // no match case
+                if (!matched) {
+                    showPopup(`Network detected: ${operatorRaw}, but cannot auto-match. Select manually.`, "warning");
+                }
 
                 submitBtn.disabled = false;
                 showPopup(`Network detected: ${providerName}`, "success");
@@ -449,5 +496,22 @@
                 if (previewNet) previewNet.textContent = selectedText || "--";
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alertBox');
+
+            alerts.forEach(alert => {
+                // Auto close after 5 seconds
+                setTimeout(() => {
+                    alert.remove();
+                }, 5000);
+
+                // Close on button click
+                const closeBtn = alert.querySelector('.close-alert');
+                closeBtn.addEventListener('click', () => {
+                    alert.remove();
+                });
+            });
+        });
     </script>
 @endpush

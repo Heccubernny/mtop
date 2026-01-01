@@ -39,6 +39,7 @@ class DashboardController extends Controller
         $data['withdraw'] = amountOnBaseCurrency(Transaction::auth()->moneyOut()->where('status', 1)->get());
         $data['total_transaction'] = Transaction::auth()->where('status', 1)->count();
         $data['total_gift_cards'] = GiftCard::auth()->count();
+        $data['total_cashback'] = UserWallet::auth()->sum('cashback');
 
         $start = strtotime(date('Y-m-01'));
         $end = strtotime(date('Y-m-31'));

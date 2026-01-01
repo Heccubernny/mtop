@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use PDF;
 
 class BillPayController extends Controller
 {
@@ -1348,10 +1349,10 @@ class BillPayController extends Controller
         ]);
     }
 
-    public function success()
-    {
-        return view('tv.success');
-    }
+    // public function success()
+    // {
+    //     return view('tv.success');
+    // }
 
 
     // public function buyDataForm(){
@@ -1366,6 +1367,12 @@ class BillPayController extends Controller
     {
         $networks = (new CkHelper())->getMobileNetworks();
         $user = userGuard()['user'];
+        $userWallet = UserWallet::where('user_id', $user->id)
+            ->whereHas("currency", function ($q) {
+                $q->where("code", "NGN")->active();
+            })
+            ->active()
+            ->first();
         $transactions = CkTransaction::where('user_id', $user->id)
             ->where('type', 'airtime')
             ->latest()
@@ -1375,7 +1382,7 @@ class BillPayController extends Controller
 
         $fixedCharge = $ckSetting->credentials->charges->airtime->fixed ?? 0;
         $percentageCharge = $ckSetting->credentials->charges->airtime->percentage ?? 0;
-        return view('user.sections.clubkonnect.buy-airtime', compact('networks', 'transactions', 'fixedCharge', 'percentageCharge'));
+        return view('user.sections.clubkonnect.buy-airtime', compact('networks', 'transactions', 'fixedCharge', 'percentageCharge', 'userWallet'));
     }
 
 
@@ -1541,7 +1548,7 @@ class BillPayController extends Controller
 
                 DB::commit();
 
-                return back()->with('error', $response['message'] ?? 'Transaction failed bro');
+                return back()->with('error', $response['status'] ?? 'Transaction failed bro');
             }
 
             /*
@@ -1621,50 +1628,6 @@ class BillPayController extends Controller
         }
     }
 
-    // public function buyAirtime(Request $request){
-    //     $request->validate([
-    //         'network_id' => 'required|integer',
-    //         'mobile' => 'required|string',
-    //         'amount' => 'required|numeric|min:50|max:200000',
-    //     ]);
-
-    //     $user = userGuard()['user'];
-
-    //     $network = CkMobileNetwork::findOrFail($request->network_id);
-
-    //     try {
-    //         $response = (new CkHelper)->buyAirtime($network->code, $request->amount, $request->mobile, null);
-
-    //         if(!empty($response['error'])) {
-    //             return back()->with('error', $response['message']);
-    //         }
-
-    //         // Save transaction
-    //         CKTransaction::create([
-    //             'user_id' => $user->id,
-    //             'request_id' => $response['RequestID'] ?? null,
-    //             'order_id' => $response['OrderID'] ?? null,
-    //             'provider' => 'ClubKonnect',
-    //             'network' => $network->name,
-    //             'mobile' => $request->mobile,
-    //             'amount' => $request->amount,
-    //             'type' => 'airtime',
-    //             'plan' => 'Purchase '.$request->amount.' '.$network->name.' Airtime for '.$request->mobile,
-    //             'status' => $response['status'] ?? 'pending',
-    //             'response_body' => json_encode($response),
-    //         ]);
-
-
-
-    //         return back()->with('success', 'Airtime purchase request sent. Check transactions below.');
-    //     } catch (\Exception $e) {
-    //         logger()->error('Airtime Purchase Error: ' . $e->getMessage());
-    //         return back()->with('error', 'Something went wrong while processing your request.');
-    //     }
-    // }
-
-
-
     public function buyAirtime(Request $request)
     {
         $request->validate([
@@ -1688,25 +1651,59 @@ class BillPayController extends Controller
             return back()->with('error', 'User wallet not found!');
         }
 
+        $useCashback = $request->has('use_cashback') ? true : false;
+
+        $userCashback = $userWallet->cashback ?? 0;
+
         $ckSetting = ReloadlyApi::clubkonnect()->utility()->first();
         $amount = $request->amount;
         $fixedCharge = $ckSetting->credentials->charges->airtime->fixed ?? 0;
         $percentageCharge = $ckSetting->credentials->charges->airtime->percentage ?? 0;
 
         $payable = $amount + $fixedCharge + ($amount * ($percentageCharge / 100));
-        // Check wallet balance
-        if ($payable > $userWallet->balance) {
-            return back()->with('error', 'Sorry, insufficient balance');
+        /*
+    |--------------------------------------------------------------------------
+    | APPLY CASHBACK PAYMENT LOGIC
+    |--------------------------------------------------------------------------
+    */
+    $walletDebit = $payable;
+    $cashbackToUse = 0;
+
+    if ($useCashback && $userCashback > 0) {
+
+        // If cashback fully covers the bill
+        if ($userCashback >= $payable) {
+            $cashbackToUse = $payable;
+            $walletDebit = 0; // no wallet debit
+        } 
+        // Partial Payment (cashback + wallet)
+        else {
+            $cashbackToUse = $userCashback;
+            $walletDebit = $payable - $userCashback;
         }
+    }
+
+    // Verify wallet balance for remaining payment
+    if ($walletDebit > 0 && $walletDebit > $userWallet->balance) {
+        return back()->with('error', 'Insufficient balance to complete with selected payment option.');
+    }
 
         // Get selected network
         $network = CkMobileNetwork::findOrFail($request->network_id);
 
         try {
             DB::beginTransaction();
-            // FIRST — debit wallet to avoid fraud
-            $userWallet->balance -= $payable;
-            $userWallet->save();
+            // FIRST — debit wallet and/or cashback to avoid fraud
+                        
+            if ($walletDebit > 0) {
+                $userWallet->balance -= $walletDebit;
+                $userWallet->save();
+            }
+
+            if ($cashbackToUse > 0) {
+                $userWallet->cashback -= $cashbackToUse;
+                $userWallet->save();
+            }
 
             // THEN call the provider
             $response = (new CkHelper())->buyAirtime(
@@ -1730,13 +1727,32 @@ class BillPayController extends Controller
             ) {
 
                 // Refund Wallet on Failure
-                $userWallet->balance += $payable;
+                if ($walletDebit > 0) {
+                $userWallet->balance += $walletDebit;
                 $userWallet->save();
+            }
+
+            if ($cashbackToUse > 0) {
+                $userWallet->cashback += $cashbackToUse;
+                $userWallet->save();
+            }
 
                 DB::commit();
+                logger()->info(json_encode($response));
 
-                return back()->with('error', $response['message']);
+                return back()->with('error', $response['status']);
             }
+
+            /*
+        |--------------------------------------------------------------------------
+        | GRANT 1% CASHBACK REWARD
+        |--------------------------------------------------------------------------
+        */
+        $cashbackEarned = round($amount * 0.01, 2);  // 1%
+        $userWallet->cashback += $cashbackEarned;
+        $userWallet->save();
+
+
 
             // Save transaction
             $transaction = CKTransaction::create([
@@ -1771,6 +1787,8 @@ class BillPayController extends Controller
 
                     $user->notify(new AirtimePurchaseMail($user, (object) $notifyData));
                 } catch (\Exception $e) {
+                    logger()->error("Airtime Email Notification Error: " . $e->getMessage());
+                    throw new \Exception($e->getMessage());
                 }
             }
 
@@ -1789,30 +1807,45 @@ class BillPayController extends Controller
                         'time'    => now()->format('Y-m-d h:i:s A')
                     ]);
                 } catch (\Exception $e) {
+                    logger()->error("Airtime SMS Notification Error: " . $e->getMessage());
+                    throw new \Exception($e->getMessage());
                 }
             }
 
             /*
             |--------------------------------------------------------------------------
-            | ADMIN NOTIFICATION (Optional)
+            | ADMIN NOTIFICATION
             |--------------------------------------------------------------------------
             */
             // $this->adminNotificationAirtime($transaction, $user);
             DB::commit();
 
 
-            return back()->with('success', 'Airtime purchase successful.');
+            // return back()->with('success', 'Airtime purchase successful.');
+
+            return redirect()->route('user.airtime.success', ['id' => $transaction->id])->with('success', 'Purchase successful');
 
         } catch (\Exception $e) {
 
             // Refund wallet on any unexpected crash
             DB::rollBack();
-
             logger()->error('Airtime Purchase Error: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong while processing your request.');
         }
     }
 
+    public function success($id){
+        $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
+        return view('user.section.clubkonnect.success', compact('transaction'));
+    }
+
+    public function downloadReceipt($id){
+        $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
+
+        $pdf = PDF::loadView('receipts.airtime-pdf', compact('transaction'))->setPaper('a4', 'portrait');
+
+        return $pdf->download('Receipt-'.$transaction->reference.'.pdf');
+    }
 
     public function ckHome()
     {
@@ -1930,7 +1963,7 @@ class BillPayController extends Controller
                 $userWallet->save();
 
                 DB::commit();
-                return back()->with('error', $response['message'] ?? 'Transaction failed');
+                return back()->with('error', $response['status'] ?? 'Transaction failed');
             }
 
             // Save transaction
