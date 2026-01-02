@@ -27,7 +27,7 @@
                                 </tr>
                                 <tr>
                                     <th>Phone Number</th>
-                                    <td>{{ $transaction->phone }}</td>
+                                    <td>{{ $transaction->mobile }}</td>
                                 </tr>
                                 <tr>
                                     <th>Amount</th>
