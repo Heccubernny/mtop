@@ -33,7 +33,7 @@ class CkHelper
     public function buyData($network, $dataPlan, $mobileNumber, $requestId = null)
     {
 
-        $requestId = $requestId ?? uniqid('ck_airtime_');
+        $requestId = $requestId ?? uniqid('ck_data_');
         $callbackUrl = $this->callbackUrl;
 
         $url = $this->apiUrl . 'APIDatabundleV1.asp';
@@ -61,7 +61,7 @@ class CkHelper
     public function buyAirtime($network, $amount, $mobileNumber, $requestId = null)
     {
 
-        $requestId = $requestId ?? uniqid('ck_data_');
+        $requestId = $requestId ?? uniqid('ck_airtime_');
         $callbackUrl = $this->callbackUrl;
 
         $url = $this->apiUrl . 'APIAirtimeV1.asp';
@@ -204,47 +204,47 @@ class CkHelper
     //         ->orderBy('price')
     //         ->get();
     // }
-public function getDataPlansByNetwork($networkId)
-{
-    // Fetch network
-    $network = CkMobileNetwork::findOrFail($networkId);
+    public function getDataPlansByNetwork($networkId)
+    {
+        // Fetch network
+        $network = CkMobileNetwork::findOrFail($networkId);
 
-    // Fetch ClubKonnect settings
-    $api = ReloadlyApi::clubkonnect()->utility()->first();
-    if (!$api) {
-        return response()->json([]);
-    }
-    // Get network-specific data categories from credentials
-    $enabledCategories = [];
-    $networks = $api->credentials->networks ?? [];
+        // Fetch ClubKonnect settings
+        $api = ReloadlyApi::clubkonnect()->utility()->first();
+        if (!$api) {
+            return response()->json([]);
+        }
+        // Get network-specific data categories from credentials
+        $enabledCategories = [];
+        $networks = $api->credentials->networks ?? [];
 
-if ($networks && isset($networks->{$network->slug}->data_categories)) {
-        foreach ($networks->{$network->slug}->data_categories as $cat) {
-            if (!empty($cat->status)) {
-                $enabledCategories[] = strtolower($cat->label);
+        if ($networks && isset($networks->{$network->slug}->data_categories)) {
+            foreach ($networks->{$network->slug}->data_categories as $cat) {
+                if (!empty($cat->status)) {
+                    $enabledCategories[] = strtolower($cat->label);
+                }
             }
         }
+
+        // Fetch plans for the network
+        $plans = CkDataPlan::where('ck_mobile_network_id', $networkId)->orderBy('price')->get();
+
+        // Filter plans by enabled data categories
+
+        $filteredPlans = $plans->filter(function ($plan) use ($enabledCategories) {
+            // Check if plan description matches any enabled category
+            foreach ($enabledCategories as $category) {
+                if (stripos($plan->description, $category) !== false) {
+                    return true; // show this plan
+                }
+            }
+
+            return false; // hide this plan
+        })->values();
+
+
+        return response()->json($filteredPlans);
     }
-
-    // Fetch plans for the network
-    $plans = CkDataPlan::where('ck_mobile_network_id', $networkId)->orderBy('price')->get();
-
-    // Filter plans by enabled data categories
-
-    $filteredPlans = $plans->filter(function ($plan) use ($enabledCategories) {
-    // Check if plan description matches any enabled category
-    foreach ($enabledCategories as $category) {
-        if (stripos($plan->description, $category) !== false) {
-            return true; // show this plan
-        }
-    }
-
-    return false; // hide this plan
-})->values();
-
-
-    return response()->json($filteredPlans);
-}
 
     public function getCableTvProviders()
     {

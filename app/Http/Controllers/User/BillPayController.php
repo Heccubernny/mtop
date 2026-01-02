@@ -32,13 +32,13 @@ use App\Notifications\User\ClubKonnect\AirtimePurchaseMail;
 use App\Notifications\User\ClubKonnect\CableTvPurchaseMail;
 use App\Notifications\User\ClubKonnect\DataPurchaseMail;
 use App\Providers\Admin\BasicSettingsProvider;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use PDF;
 
 class BillPayController extends Controller
 {
@@ -1758,7 +1758,7 @@ class BillPayController extends Controller
             $transaction = CKTransaction::create([
                 'user_id'       => $user->id,
                 'request_id'    => $response['RequestID'] ?? null,
-                'order_id'      => $response['OrderID'] ?? null,
+                'order_id'      => $response['orderid'] ?? null,
                 'provider'      => 'ClubKonnect',
                 'network'       => $network->name,
                 'mobile'        => $request->mobile,
@@ -1844,7 +1844,7 @@ class BillPayController extends Controller
     {
         $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
 
-        $pdf = PDF::loadView('receipts.airtime-pdf', compact('transaction'))->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('receipts.airtime-pdf', compact('transaction'))->setPaper('a4', 'portrait');
 
         return $pdf->download('Receipt-'.$transaction->reference.'.pdf');
     }
