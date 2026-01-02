@@ -117,7 +117,7 @@
         <table class="table">
             <tr>
                 <th>Reference</th>
-                <td>{{ $transaction->response_body['orderid'] }}</td>
+                <td>{{ data_get($transaction->response_body, 'orderid') }}</td>
             </tr>
             <tr>
                 <th>Customer</th>
