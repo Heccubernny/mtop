@@ -1837,7 +1837,7 @@ class BillPayController extends Controller
     public function successAirtime($id)
     {
         $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
-        return view('user.section.clubkonnect.success', compact('transaction'));
+        return view('user.sections.clubkonnect.success', compact('transaction'));
     }
 
     public function downloadReceipt($id)
