@@ -1753,7 +1753,7 @@ class BillPayController extends Controller
             $userWallet->save();
 
 
-
+            logger()->info(json_encode($response));
             // Save transaction
             $transaction = CKTransaction::create([
                 'user_id'       => $user->id,
