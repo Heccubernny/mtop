@@ -33,7 +33,7 @@
                                 <tbody>
                                     <tr>
                                         <th class="text-muted w-50">Transaction Reference</th>
-                                        <td class="fw-semibold">{{ $transaction->order_id }}</td>
+                                        <td class="fw-semibold">{{ $transaction->response_body->orderid }}</td>
                                     </tr>
 
                                     <tr>

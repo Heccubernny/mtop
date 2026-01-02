@@ -1846,7 +1846,7 @@ class BillPayController extends Controller
 
         $pdf = Pdf::loadView('receipts.airtime-pdf', compact('transaction'))->setPaper('a4', 'portrait');
 
-        return $pdf->download('Receipt-'.$transaction->reference.'.pdf');
+        return $pdf->download('Receipt-'.$transaction->order_id.'.pdf');
     }
 
     public function ckHome()
