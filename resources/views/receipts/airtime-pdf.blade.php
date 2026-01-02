@@ -121,7 +121,7 @@
             </tr>
             <tr>
                 <th>Customer</th>
-                <td>{{ $transaction->user->name }}</td>
+                <td>{{ auth()->user->name }}</td>
             </tr>
             <tr>
                 <th>Email</th>
@@ -133,7 +133,7 @@
             </tr>
             <tr>
                 <th>Phone Number</th>
-                <td>{{ $transaction->phone }}</td>
+                <td>{{ $transaction->mobile }}</td>
             </tr>
             <tr>
                 <th>Amount</th>
