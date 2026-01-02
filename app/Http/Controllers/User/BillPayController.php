@@ -1666,27 +1666,27 @@ class BillPayController extends Controller
     | APPLY CASHBACK PAYMENT LOGIC
     |--------------------------------------------------------------------------
     */
-    $walletDebit = $payable;
-    $cashbackToUse = 0;
+        $walletDebit = $payable;
+        $cashbackToUse = 0;
 
-    if ($useCashback && $userCashback > 0) {
+        if ($useCashback && $userCashback > 0) {
 
-        // If cashback fully covers the bill
-        if ($userCashback >= $payable) {
-            $cashbackToUse = $payable;
-            $walletDebit = 0; // no wallet debit
-        } 
-        // Partial Payment (cashback + wallet)
-        else {
-            $cashbackToUse = $userCashback;
-            $walletDebit = $payable - $userCashback;
+            // If cashback fully covers the bill
+            if ($userCashback >= $payable) {
+                $cashbackToUse = $payable;
+                $walletDebit = 0; // no wallet debit
+            }
+            // Partial Payment (cashback + wallet)
+            else {
+                $cashbackToUse = $userCashback;
+                $walletDebit = $payable - $userCashback;
+            }
         }
-    }
 
-    // Verify wallet balance for remaining payment
-    if ($walletDebit > 0 && $walletDebit > $userWallet->balance) {
-        return back()->with('error', 'Insufficient balance to complete with selected payment option.');
-    }
+        // Verify wallet balance for remaining payment
+        if ($walletDebit > 0 && $walletDebit > $userWallet->balance) {
+            return back()->with('error', 'Insufficient balance to complete with selected payment option.');
+        }
 
         // Get selected network
         $network = CkMobileNetwork::findOrFail($request->network_id);
@@ -1694,7 +1694,7 @@ class BillPayController extends Controller
         try {
             DB::beginTransaction();
             // FIRST — debit wallet and/or cashback to avoid fraud
-                        
+
             if ($walletDebit > 0) {
                 $userWallet->balance -= $walletDebit;
                 $userWallet->save();
@@ -1728,14 +1728,14 @@ class BillPayController extends Controller
 
                 // Refund Wallet on Failure
                 if ($walletDebit > 0) {
-                $userWallet->balance += $walletDebit;
-                $userWallet->save();
-            }
+                    $userWallet->balance += $walletDebit;
+                    $userWallet->save();
+                }
 
-            if ($cashbackToUse > 0) {
-                $userWallet->cashback += $cashbackToUse;
-                $userWallet->save();
-            }
+                if ($cashbackToUse > 0) {
+                    $userWallet->cashback += $cashbackToUse;
+                    $userWallet->save();
+                }
 
                 DB::commit();
                 logger()->info(json_encode($response));
@@ -1748,9 +1748,9 @@ class BillPayController extends Controller
         | GRANT 1% CASHBACK REWARD
         |--------------------------------------------------------------------------
         */
-        $cashbackEarned = round($amount * 0.01, 2);  // 1%
-        $userWallet->cashback += $cashbackEarned;
-        $userWallet->save();
+            $cashbackEarned = round($amount * 0.01, 2);  // 1%
+            $userWallet->cashback += $cashbackEarned;
+            $userWallet->save();
 
 
 
@@ -1834,12 +1834,14 @@ class BillPayController extends Controller
         }
     }
 
-    public function success($id){
+    public function successAirtime($id)
+    {
         $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
         return view('user.section.clubkonnect.success', compact('transaction'));
     }
 
-    public function downloadReceipt($id){
+    public function downloadReceipt($id)
+    {
         $transaction = CKTransaction::where('id', $id)->where('user_id', userGuard()['user']->id)->firstOrFail();
 
         $pdf = PDF::loadView('receipts.airtime-pdf', compact('transaction'))->setPaper('a4', 'portrait');
@@ -2040,6 +2042,6 @@ class BillPayController extends Controller
         }
     }
 
-    
+
 
 }
