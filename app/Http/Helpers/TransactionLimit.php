@@ -26,8 +26,8 @@ class TransactionLimit
         if ($transactionType == PaymentGatewayConst::TYPEMONEYOUT || $transactionType == PaymentGatewayConst::TYPEADDMONEY) {
             $exchange_rate = $limits->rate / $currency->rate;
 
-            $dailyLimitBaseCurrency = get_amount($limits->daily_limit / $exchange_rate, null, get_wallet_precision($currency));  // in Base Currency
-            $monthlyLimitBaseCurrency = get_amount($limits->monthly_limit / $exchange_rate, null, get_wallet_precision($currency)); // in Base Currency
+            $dailyLimitBaseCurrency = get_amount($limits->daily_limit * $exchange_rate, null, get_wallet_precision($currency));  // in Base Currency
+            $monthlyLimitBaseCurrency = get_amount($limits->monthly_limit * $exchange_rate, null, get_wallet_precision($currency)); // in Base Currency
 
             // make convert to base curr
             $reverse_exchange_rate_base = get_amount((get_default_currency_rate() / $currency->rate), null, get_wallet_precision($currency));
@@ -103,13 +103,15 @@ class TransactionLimit
 
         ];
 
+        logger()->info(json_encode($json));
+
         // Validate daily and monthly limits
         if ($dailyLimitBaseCurrency > 0 && ($dailyTotalInBasedCurrency + $amountInBasedCurrency) > $dailyLimitBaseCurrency) {
 
             if ($json != null) {
                 return [
                     'status' => false,
-                    'message' => __('Daily transaction limit exceeded.'),
+                    'message' => __('Daily transaction limit exceeded bro.'),
                     'user_field' => $user_field,
                     'user_id' => $userId,
                     'transaction_type' => $transactionType,
@@ -120,7 +122,7 @@ class TransactionLimit
 
                 throw new Exception(json_encode([
                     'status' => false,
-                    'message' => __('Daily transaction limit exceeded.'),
+                    'message' => __('Daily transaction limit exceeded sis.'),
                     'user_field' => $user_field,
                     'user_id' => $userId,
                     'transaction_type' => $transactionType,
@@ -134,7 +136,7 @@ class TransactionLimit
             if ($json != null) {
                 return [
                     'status' => false,
-                    'message' => __('Monthly transaction limit exceeded.'),
+                    'message' => __('Monthly transaction limit exceeded. bro'),
                     'user_field' => $user_field,
                     'user_id' => $userId,
                     'transaction_type' => $transactionType,
@@ -144,7 +146,7 @@ class TransactionLimit
             } else {
                 throw new Exception(json_encode([
                     'status' => false,
-                    'message' => __('Monthly transaction limit exceeded.'),
+                    'message' => __('Monthly transaction limit exceeded. sis'),
                     'user_field' => $user_field,
                     'user_id' => $userId,
                     'transaction_type' => $transactionType,

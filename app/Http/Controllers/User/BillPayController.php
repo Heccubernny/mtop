@@ -142,9 +142,13 @@ class BillPayController extends Controller
         }
         $charges = $this->manualBillPayCharge($amount, $billPayCharge, $userWallet);
 
+        logger()->info("Charges: ".json_encode($charges));
 
         $min_amount = $billPayCharge->min_limit / $charges['exchange_rate'];
         $max_amount = $billPayCharge->max_limit / $charges['exchange_rate'];
+        // $min_amount = $billPayCharge->min_limit * $charges['exchange_rate'];
+        // $max_amount = $billPayCharge->max_limit * $charges['exchange_rate'];
+
 
 
 
@@ -365,7 +369,7 @@ class BillPayController extends Controller
         $data['total_charge'] = $data['percent_charge'] + $data['fixed_charge'];
 
         $data['sender_wallet_balance'] = $userWallet->balance;
-        $data['conversion_amount'] = $sender_amount * $exchange_rate;
+        $data['conversion_amount'] = ($sender_amount * $exchange_rate);
         $data['payable'] = $data['sender_amount'] + $data['total_charge'];
         $data['precision_digit'] = $sPrecision;
 
@@ -419,8 +423,8 @@ class BillPayController extends Controller
         $billPayCharge = TransactionSetting::where('slug', 'bill_pay')->where('status', 1)->first();
         $charges = $this->automaticBillPayCharge($userWallet, $biller, $bill_amount, $billPayCharge);
 
-        $minLimit = $biller['minLocalTransactionAmount'] / $charges['exchange_rate'];
-        $maxLimit = $biller['maxLocalTransactionAmount'] / $charges['exchange_rate'];
+        $minLimit = $biller['minLocalTransactionAmount'] * $charges['exchange_rate'];
+        $maxLimit = $biller['maxLocalTransactionAmount'] * $charges['exchange_rate'];
 
 
         if ($charges['sender_amount'] < $minLimit || $charges['sender_amount'] > $maxLimit) {

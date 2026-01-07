@@ -217,7 +217,7 @@ class GlobalController extends Controller
             $limits = TransactionSetting::where('id', $charge_id)->first();
         }
 
-        $result = (new TransactionLimit)->trxLimit($user_field, $user_id, $transaction_type, $currency, $sender_amount, $limits, $attribute, 'json');
+        $result = (new TransactionLimit())->trxLimit($user_field, $user_id, $transaction_type, $currency, $sender_amount, $limits, $attribute, 'json');
 
         return response()->json($result);
 

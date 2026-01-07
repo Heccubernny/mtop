@@ -560,7 +560,7 @@
 
         });
 
-
+        // important aspect of the code
         function acceptVar() {
             var senderCurrSelectedVal = $("select[name=currency] :selected");
             var senderCurrencyCode = $("select[name=currency] :selected").val();
@@ -621,15 +621,25 @@
         function getLimit() {
             var exchangeRate = parseFloat($("input[name=exchange_rate]").val());
             var walletCurrencyCode = acceptVar().SCurrencyCode;
+            var sender_currency = acceptVar().SCurrencyCode;
+            var sender_currency_rate = acceptVar().SCurrencyRate;
             if (acceptVar().billType.val() === "null") {
                 return false;
             }
             if (acceptVar().billType.data('item-type') === "AUTOMATIC") {
                 var item = acceptVar().billType.data('item');
+                console.log(item, exchangeRate)
                 var min_limit = parseFloat(item.minLocalTransactionAmount) / parseFloat(exchangeRate);
                 var max_limit = parseFloat(item.maxLocalTransactionAmount) / parseFloat(exchangeRate);
+                // var min_limit = acceptVar().currencyMinAmount;
+                // var max_limit = acceptVar().currencyMaxAmount;
+
+                // min_limit_calc = parseFloat(min_limit * sender_currency_rate).toFixed(accept().sPrecison);
+                // max_limit_calc = parseFloat(max_limit * sender_currency_rate).toFixed(accept().sPrecison);
+                // $('.limit-show').html(min_limit_calc + " " + sender_currency + " d-d " + max_limit_calc + " " + sender_currency);
                 $('.limit-show').html(min_limit.toFixed(acceptVar().sPrecison) + " " + walletCurrencyCode + " - " +
                     max_limit.toFixed(acceptVar().sPrecison) + " " + walletCurrencyCode);
+
             } else {
                 var currencyCode = acceptVar().SCurrencyCode;
                 var currencyRate = acceptVar().SCurrencyRate;
@@ -638,13 +648,20 @@
                 var max_limit = acceptVar().currencyMaxAmount;
                 if ($.isNumeric(min_limit) || $.isNumeric(max_limit)) {
                     var min_limit_calc = parseFloat(min_limit / exchangeRate);
-                    var max_limit_clac = parseFloat(max_limit / exchangeRate);
+                    var max_limit_calc = parseFloat(max_limit / exchangeRate);
                     $('.limit-show').html(min_limit_calc.toFixed(acceptVar().sPrecison) + " " + currencyCode + " - " +
-                        max_limit_clac.toFixed(acceptVar().sPrecison) + " " + currencyCode);
+                        max_limit_calc.toFixed(acceptVar().sPrecison) + " " + currencyCode);
+                    // var min_limit = acceptVar().currencyMinAmount;
+                    // var max_limit = acceptVar().currencyMaxAmount;
+
+                    // var min_limit_calc = parseFloat(min_limit * sender_currency_rate).toFixed(acceptVar().sPrecison);
+                    // var max_limit_calc = parseFloat(max_limit * sender_currency_rate).toFixed(acceptVar().sPrecison);
+                    // $('.limit-show').html(min_limit_calc + " " + sender_currency + " f-f " + max_limit_calc + " " +
+                    //     sender_currency);
 
                     return {
                         minLimit: min_limit_calc,
-                        maxLimit: max_limit_clac,
+                        maxLimit: max_limit_calc,
                     };
                 } else {
                     $('.limit-show').html("--");
@@ -672,8 +689,8 @@
                 }
 
                 if (monthly_limit > 0) {
-                    var montly_limit_clac = parseFloat(monthly_limit * sender_currency_rate).toFixed(acceptVar().sPrecison);
-                    $('.limit-monthly').html(montly_limit_clac + " " + sender_currency);
+                    var montly_limit_calc = parseFloat(monthly_limit * sender_currency_rate).toFixed(acceptVar().sPrecison);
+                    $('.limit-monthly').html(montly_limit_calc + " " + sender_currency);
 
                 } else {
                     $('.limit-monthly').html("");
@@ -856,6 +873,7 @@
 
 
             var sender_amount = parseFloat($("input[name=amount]").val());
+            console.log([sender_amount, min_limit, max_limit])
             // Corrected code:
             if (sender_amount === "NaN" || sender_amount === "") {
                 sender_amount = 0;
