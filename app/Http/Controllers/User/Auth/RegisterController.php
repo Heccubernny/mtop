@@ -46,7 +46,11 @@ class RegisterController extends Controller
     |
     */
 
-    use AuthNotifications, ControlDynamicInputFields, Monnify, RegisteredUsers, RegistersUsers;
+    use AuthNotifications;
+    use ControlDynamicInputFields;
+    use Monnify;
+    use RegisteredUsers;
+    use RegistersUsers;
 
     protected $basic_settings;
 
@@ -721,6 +725,9 @@ class RegisterController extends Controller
         ]);
 
         try {
+            $authUser = auth()->user();
+            $userId = $authUser->id;
+            $user = User::where('id', $userId)->first();
             $type = $request->input('type');
             $data = $request->only(['bvn', 'nin', 'name', 'dateOfBirth', 'mobileNo']);
             logger()->info('Verification data: '.json_encode($data));
@@ -768,6 +775,7 @@ class RegisterController extends Controller
                 ]);
 
                 alert()->success('Nin verification', 'Verify successfully');
+                $user->update(['kyc_verified' => GlobalConst::VERIFIED]);
 
                 return response()->json([
                     'success' => true,
@@ -808,7 +816,10 @@ class RegisterController extends Controller
                         'phone' => $data['mobileNo'] ?? null,
                     ]);
 
-                    alert()->success('BVN Verification', 'Bro BVN verified successfully.');
+                    alert()->success('BVN Verification', 'BVN verified successfully.');
+
+                    $user->update(['kyc_verified' => GlobalConst::VERIFIED]);
+
 
                     return response()->json([
                         'success' => true,
