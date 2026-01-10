@@ -3327,6 +3327,7 @@ function sendSms($user, $type, $shortCodes = [])
         $platform = $basic_settings->sms_config->name;
 
         $sendSms = new SendSms();
+        logger()->info("Platform: ".$platform);
         if ($smsTemplate) {
             $template = $smsTemplate->sms_body;
             foreach ($shortCodes as $code => $value) {
